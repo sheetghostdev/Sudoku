@@ -313,7 +313,7 @@ details ol { padding-left: 1.2em; }
     </section>
     <section>
       <h3>Settings</h3>
-      <button class="switch" type="button" role="switch" id="set-mistakes" aria-checked="true"><span>Show mistakes<small>Wrong numbers are marked as you go</small></span><i></i></button>
+      <button class="switch" type="button" role="switch" id="set-mistakes" aria-checked="false"><span>Show mistakes<small>Off: no help, just like on paper. On: wrong numbers turn red</small></span><i></i></button>
       <button class="switch" type="button" role="switch" id="set-timer" aria-checked="true"><span>Timer<small>Hide it for a slower, quieter solve</small></span><i></i></button>
       <button class="switch" type="button" role="switch" id="set-sprinkles" aria-checked="true"><span>Falling decorations<small>Snow, leaves and other theme touches</small></span><i></i></button>
     </section>
@@ -597,7 +597,12 @@ var Engine = (function () {
       } catch (e) {}
     }
   };
-  var settings = Object.assign({ theme: 'auto', mistakes: true, timer: true, sprinkles: true }, store.get('settings', {}));
+  // Mistake marking is off by default, like sudoku on paper. Older saved settings
+  // had it on by default, so only carry over the other choices from them.
+  var oldSettings = store.get('settings', null);
+  var settings = Object.assign({ theme: 'auto', mistakes: false, timer: true, sprinkles: true },
+    oldSettings ? { theme: oldSettings.theme, timer: oldSettings.timer, sprinkles: oldSettings.sprinkles } : {},
+    store.get('settings2', {}));
   var stats = Object.assign({ solved: 0, streak: 0, best: 0, last: null, times: [null, null, null] }, store.get('stats', {}));
 
   // ---------- dates ----------
@@ -680,7 +685,7 @@ var Engine = (function () {
       b.textContent = o.name; note.textContent = o.note; emo.className = 'emo'; emo.textContent = o.icon; emo.setAttribute('aria-hidden', 'true');
       text.appendChild(b); text.appendChild(note);
       btn.appendChild(sw); btn.appendChild(text); btn.appendChild(emo);
-      btn.addEventListener('click', function () { settings.theme = o.id; store.set('settings', settings); applyTheme(); renderThemePicker(); });
+      btn.addEventListener('click', function () { settings.theme = o.id; store.set('settings2', settings); applyTheme(); renderThemePicker(); });
       host.appendChild(btn);
     });
   }
@@ -820,10 +825,7 @@ var Engine = (function () {
 
   function isWrong(i) {
     var v = G.vals[i];
-    if (!v || G.puzzle[i]) return false;
-    if (settings.mistakes) return v !== G.solution[i];
-    for (var q = 0; q < 20; q++) if (G.vals[PEERS[i][q]] === v) return true;
-    return false;
+    return !!v && !G.puzzle[i] && settings.mistakes && v !== G.solution[i];
   }
 
   function render() {
@@ -997,7 +999,7 @@ var Engine = (function () {
   }
   [['set-mistakes', 'mistakes'], ['set-timer', 'timer'], ['set-sprinkles', 'sprinkles']].forEach(function (pair) {
     $(pair[0]).addEventListener('click', function () {
-      settings[pair[1]] = !settings[pair[1]]; store.set('settings', settings);
+      settings[pair[1]] = !settings[pair[1]]; store.set('settings2', settings);
       if (pair[1] === 'timer' && !settings.timer) G.paused = false;
       renderMenu(); applyTheme(); render();
     });
