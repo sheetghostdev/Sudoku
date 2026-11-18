@@ -329,7 +329,7 @@ details ol { padding-left: 1.2em; }
           <li><b>iPhone:</b> open the link in Safari, tap Share, then Add to Home Screen.</li>
           <li><b>Android:</b> open the link in Chrome, tap the menu, then Add to Home screen or Install app.</li>
         </ol>
-        <p>It then opens like any other app and works without internet.</p>
+        <p>It then opens like any other app and works without internet. Updates arrive on their own the next time you open it with internet, so there is no need to install it again.</p>
       </details>
     </section>
     <section>
@@ -343,6 +343,7 @@ details ol { padding-left: 1.2em; }
         <p>This clears your numbers and notes. The timer keeps running.</p>
         <p><button class="btn quiet" type="button" id="btn-restart">Clear my progress</button></p>
       </details>
+      <p class="bests" id="version">Version 3</p>
     </section>
   </div>
 </div>
@@ -1105,7 +1106,16 @@ var Engine = (function () {
   loadDay(start);
 
   if (!EMBEDDED && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (reg) { reg.update(); }).catch(function () {});
+    });
+    // When a newer version takes over, reload once so it shows straight away.
+    // Progress is saved first, so nothing is lost.
+    var hadController = !!navigator.serviceWorker.controller, reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!hadController || reloaded) return;
+      reloaded = true; if (G) save(); location.reload();
+    });
   }
 })();
 </script>
